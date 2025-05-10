@@ -14,13 +14,12 @@
     #map { height: 500px; margin-top: 20px; border: 1px solid #ccc; }
     #submitBtn {
       margin-top: 10px;
-      padding: 8px 20px;
-      font-size: 16px;
+      padding: 6px 20px;
       background-color: crimson;
       color: white;
       border: none;
-      border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -28,7 +27,7 @@
   <h2>📍 All India Administrative Map + Satellite View</h2>
 
   <label>State:</label>
-  <select id="state"></select>
+  <select id="state"><option>-- Select --</option></select>
 
   <label>District:</label>
   <select id="district"></select>
@@ -45,7 +44,6 @@
   <label>Longitude (° ' "):</label>
   <input id="lon_deg"> <input id="lon_min"> <input id="lon_sec">
 
-  <!-- 🔴 Submit Button -->
   <br>
   <button id="submitBtn">Submit</button>
 
@@ -67,6 +65,7 @@
     const districtSel = document.getElementById('district');
     const tehsilSel = document.getElementById('tehsil');
     const villageSel = document.getElementById('village');
+    const adminData = {};
 
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
@@ -90,12 +89,19 @@
     map.on('click', function (e) {
       const { lat, lng } = e.latlng;
       updateDMSFields(lat, lng);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lng]).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
-    });
 
-    const adminData = {};
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', function (event) {
+          const pos = event.target.getLatLng();
+          updateDMSFields(pos.lat, pos.lng);
+        });
+      }
+
+      marker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+    });
 
     function populateDropdown(select, items) {
       select.innerHTML = '<option value="">-- Select --</option>';
@@ -149,26 +155,25 @@
       const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
       updateDMSFields(lat, lon);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lon]).addTo(map).bindPopup(village).openPopup();
+      if (!marker) {
+        marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+        marker.on('dragend', function (event) {
+          const pos = event.target.getLatLng();
+          updateDMSFields(pos.lat, pos.lng);
+        });
+      } else {
+        marker.setLatLng([lat, lon]);
+      }
+      marker.bindPopup(village).openPopup();
     });
 
-    // 🔴 Submit Button Click Handler
-    document.getElementById("submitBtn").addEventListener("click", () => {
-      const lat = marker?.getLatLng()?.lat || "";
-      const lon = marker?.getLatLng()?.lng || "";
-      if (lat && lon) {
-        alert(`Submitted Coordinates:\nLatitude: ${lat.toFixed(6)}\nLongitude: ${lon.toFixed(6)}`);
-        // You can also POST this data using fetch() to your server endpoint
-      } else {
-        alert("Please click on the map to select a location first.");
-      }
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      alert("Lat-Long submitted:\n" +
+        `Latitude: ${document.getElementById('lat_deg').value}° ${document.getElementById('lat_min').value}' ${document.getElementById('lat_sec').value}"\n` +
+        `Longitude: ${document.getElementById('lon_deg').value}° ${document.getElementById('lon_min').value}' ${document.getElementById('lon_sec').value}"`);
     });
 
     loadData();
   </script>
 </body>
 </html>
-
-
-
