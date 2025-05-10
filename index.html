@@ -55,15 +55,6 @@
     const tehsilSel = document.getElementById('tehsil');
     const villageSel = document.getElementById('village');
 
-    const stateMap = {
-      'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam', 'BR': 'Bihar', 'CG': 'Chhattisgarh',
-      'DL': 'Delhi', 'GA': 'Goa', 'GJ': 'Gujarat', 'HR': 'Haryana', 'HP': 'Himachal Pradesh',
-      'JK': 'Jammu & Kashmir', 'JH': 'Jharkhand', 'KA': 'Karnataka', 'KL': 'Kerala', 'MP': 'Madhya Pradesh',
-      'MH': 'Maharashtra', 'MN': 'Manipur', 'ML': 'Meghalaya', 'MZ': 'Mizoram', 'NL': 'Nagaland',
-      'OD': 'Odisha', 'PB': 'Punjab', 'RJ': 'Rajasthan', 'SK': 'Sikkim', 'TN': 'Tamil Nadu',
-      'TS': 'Telangana', 'TR': 'Tripura', 'UP': 'Uttar Pradesh', 'UK': 'Uttarakhand', 'WB': 'West Bengal'
-    };
-
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
       const minFloat = (deg - d) * 60;
@@ -83,39 +74,28 @@
       document.getElementById('lon_sec').value = lonS;
     }
 
-    map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
-      updateDMSFields(lat, lng);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+    function addDraggableMarker(lat, lon, popupText) {
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(popupText).openPopup();
+      updateDMSFields(lat, lon);
 
-      marker.on('dragend', function (event) {
-        const pos = event.target.getLatLng();
+      marker.on('dragend', function (e) {
+        const pos = e.target.getLatLng();
         updateDMSFields(pos.lat, pos.lng);
-        marker.setPopupContent(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
+        marker.bindPopup(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
       });
-    });
+    }
 
     const adminData = {};
+    let stateNameMap = {}; // code to full name
 
-    function populateDropdown(select, items) {
+    function populateDropdown(select, items, isState = false) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key;
-        opt.text = key;
+        opt.text = isState && stateNameMap[key] ? stateNameMap[key] : key;
         select.appendChild(opt);
-      });
-    }
-
-    function populateStateDropdown(data) {
-      stateSel.innerHTML = '<option value="">-- Select State --</option>';
-      Object.keys(data).forEach(code => {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.text = stateMap[code] || code;
-        stateSel.appendChild(opt);
       });
     }
 
@@ -126,7 +106,18 @@
           const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
           const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
-          populateStateDropdown(adminData);
+          // Sample full names — update more as needed
+          stateNameMap = {
+            "AP": "Andhra Pradesh", "AR": "Arunachal Pradesh", "AS": "Assam", "BR": "Bihar",
+            "CG": "Chhattisgarh", "DL": "Delhi", "GJ": "Gujarat", "HR": "Haryana",
+            "HP": "Himachal Pradesh", "JK": "Jammu & Kashmir", "JH": "Jharkhand",
+            "KA": "Karnataka", "KL": "Kerala", "MP": "Madhya Pradesh", "MH": "Maharashtra",
+            "MN": "Manipur", "ML": "Meghalaya", "MZ": "Mizoram", "NL": "Nagaland",
+            "OD": "Odisha", "PB": "Punjab", "RJ": "Rajasthan", "SK": "Sikkim",
+            "TN": "Tamil Nadu", "TS": "Telangana", "TR": "Tripura", "UK": "Uttarakhand",
+            "UP": "Uttar Pradesh", "WB": "West Bengal", "LD": "Lakshadweep", "PY": "Puducherry"
+          };
+          populateDropdown(stateSel, adminData, true);
         });
     }
 
@@ -158,16 +149,12 @@
       const village = villageSel.value;
       const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
-      updateDMSFields(lat, lon);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lon], { draggable: true }).addTo(map)
-        .bindPopup(village).openPopup();
+      addDraggableMarker(lat, lon, village);
+    });
 
-      marker.on('dragend', function (event) {
-        const pos = event.target.getLatLng();
-        updateDMSFields(pos.lat, pos.lng);
-        marker.setPopupContent(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
-      });
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      addDraggableMarker(lat, lng, `Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`);
     });
 
     loadData();
