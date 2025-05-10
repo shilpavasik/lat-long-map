@@ -12,22 +12,14 @@
     label { font-weight: bold; display: block; margin-top: 10px; }
     select, input { width: 240px; padding: 5px; margin: 5px 0; }
     #map { height: 500px; margin-top: 20px; border: 1px solid #ccc; }
-    #submitBtn {
-      margin-top: 10px;
-      padding: 6px 20px;
-      background-color: crimson;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    #submitBtn { margin-top: 10px; padding: 8px 20px; font-weight: bold; background-color: #c41414; color: white; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
   <h2>📍 All India Administrative Map + Satellite View</h2>
 
   <label>State:</label>
-  <select id="state"><option>-- Select --</option></select>
+  <select id="state"></select>
 
   <label>District:</label>
   <select id="district"></select>
@@ -51,21 +43,19 @@
 
   <script>
     const map = L.map('map').setView([22.9734, 78.6569], 5);
-
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Imagery © Esri'
     }).addTo(map);
-
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Labels © Esri'
     }).addTo(map);
 
     let marker;
+    let adminData = {};
     const stateSel = document.getElementById('state');
     const districtSel = document.getElementById('district');
     const tehsilSel = document.getElementById('tehsil');
     const villageSel = document.getElementById('village');
-    const adminData = {};
 
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
@@ -89,18 +79,14 @@
     map.on('click', function (e) {
       const { lat, lng } = e.latlng;
       updateDMSFields(lat, lng);
+      if (marker) marker.remove();
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
 
-      if (marker) {
-        marker.setLatLng([lat, lng]);
-      } else {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-        marker.on('dragend', function (event) {
-          const pos = event.target.getLatLng();
-          updateDMSFields(pos.lat, pos.lng);
-        });
-      }
-
-      marker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+      marker.on('dragend', function (e) {
+        const newLatLng = e.target.getLatLng();
+        updateDMSFields(newLatLng.lat, newLatLng.lng);
+      });
     });
 
     function populateDropdown(select, items) {
@@ -127,8 +113,7 @@
     stateSel.addEventListener('change', () => {
       const state = stateSel.value;
       if (adminData[state]) populateDropdown(districtSel, adminData[state]);
-      tehsilSel.innerHTML = '<option value="">-- Select --</option>';
-      villageSel.innerHTML = '<option value="">-- Select --</option>';
+      tehsilSel.innerHTML = villageSel.innerHTML = '<option value="">-- Select --</option>';
     });
 
     districtSel.addEventListener('change', () => {
@@ -155,22 +140,34 @@
       const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
       updateDMSFields(lat, lon);
-      if (!marker) {
-        marker = L.marker([lat, lon], { draggable: true }).addTo(map);
-        marker.on('dragend', function (event) {
-          const pos = event.target.getLatLng();
-          updateDMSFields(pos.lat, pos.lng);
-        });
-      } else {
-        marker.setLatLng([lat, lon]);
-      }
-      marker.bindPopup(village).openPopup();
+      if (marker) marker.remove();
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(village).openPopup();
+
+      marker.on('dragend', function (e) {
+        const newLatLng = e.target.getLatLng();
+        updateDMSFields(newLatLng.lat, newLatLng.lng);
+      });
     });
 
     document.getElementById('submitBtn').addEventListener('click', () => {
-      alert("Lat-Long submitted:\n" +
-        `Latitude: ${document.getElementById('lat_deg').value}° ${document.getElementById('lat_min').value}' ${document.getElementById('lat_sec').value}"\n` +
-        `Longitude: ${document.getElementById('lon_deg').value}° ${document.getElementById('lon_min').value}' ${document.getElementById('lon_sec').value}"`);
+      const state = stateSel.value;
+      const district = districtSel.value;
+      const tehsil = tehsilSel.value;
+      const village = villageSel.value;
+
+      const lat = `${document.getElementById('lat_deg').value}°${document.getElementById('lat_min').value}'${document.getElementById('lat_sec').value}"`;
+      const lon = `${document.getElementById('lon_deg').value}°${document.getElementById('lon_min').value}'${document.getElementById('lon_sec').value}"`;
+
+      const csv = `State,District,Tehsil,Village,Latitude,Longitude\n"${state}","${district}","${tehsil}","${village}","${lat}","${lon}"`;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${village}_location.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
 
     loadData();
