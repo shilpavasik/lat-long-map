@@ -12,6 +12,16 @@
     label { font-weight: bold; display: block; margin-top: 10px; }
     select, input { width: 240px; padding: 5px; margin: 5px 0; }
     #map { height: 500px; margin-top: 20px; border: 1px solid #ccc; }
+    #submitBtn {
+      margin-top: 10px;
+      padding: 8px 20px;
+      font-size: 16px;
+      background-color: crimson;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -35,6 +45,10 @@
   <label>Longitude (° ' "):</label>
   <input id="lon_deg"> <input id="lon_min"> <input id="lon_sec">
 
+  <!-- 🔴 Submit Button -->
+  <br>
+  <button id="submitBtn">Submit</button>
+
   <div id="map"></div>
 
   <script>
@@ -47,16 +61,6 @@
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Labels © Esri'
     }).addTo(map);
-
-    const stateNames = {
-      "AP": "Andhra Pradesh", "AR": "Arunachal Pradesh", "AS": "Assam", "BR": "Bihar", "CG": "Chhattisgarh",
-      "CH": "Chandigarh", "DL": "Delhi", "GA": "Goa", "GJ": "Gujarat", "HR": "Haryana", "HP": "Himachal Pradesh",
-      "JH": "Jharkhand", "JK": "Jammu and Kashmir", "KA": "Karnataka", "KL": "Kerala", "LA": "Ladakh",
-      "LD": "Lakshadweep", "MH": "Maharashtra", "ML": "Meghalaya", "MN": "Manipur", "MP": "Madhya Pradesh",
-      "MZ": "Mizoram", "NL": "Nagaland", "OD": "Odisha", "PB": "Punjab", "PY": "Puducherry", "RJ": "Rajasthan",
-      "SK": "Sikkim", "TN": "Tamil Nadu", "TS": "Telangana", "TR": "Tripura", "UP": "Uttar Pradesh",
-      "UK": "Uttarakhand", "WB": "West Bengal", "AN": "Andaman and Nicobar Islands", "DI": "Dadra & Nagar Haveli and Daman & Diu"
-    };
 
     let marker;
     const stateSel = document.getElementById('state');
@@ -83,23 +87,22 @@
       document.getElementById('lon_sec').value = lonS;
     }
 
-    function setMarker(lat, lon, popup = '') {
-      if (marker) map.removeLayer(marker);
-      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(popup).openPopup();
-      marker.on('dragend', function (e) {
-        const { lat, lng } = e.target.getLatLng();
-        updateDMSFields(lat, lng);
-      });
-    }
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      updateDMSFields(lat, lng);
+      if (marker) marker.remove();
+      marker = L.marker([lat, lng]).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+    });
 
     const adminData = {};
 
-    function populateDropdown(select, items, labelMap = {}) {
+    function populateDropdown(select, items) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key;
-        opt.text = labelMap[key] || key;
+        opt.text = key;
         select.appendChild(opt);
       });
     }
@@ -111,7 +114,7 @@
           const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
           const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
-          populateDropdown(stateSel, adminData, stateNames);
+          populateDropdown(stateSel, adminData);
         });
     }
 
@@ -125,7 +128,8 @@
     districtSel.addEventListener('change', () => {
       const state = stateSel.value;
       const dist = districtSel.value;
-      if (adminData[state][dist]) populateDropdown(tehsilSel, adminData[state][dist]);
+      if (adminData[state] && adminData[state][dist])
+        populateDropdown(tehsilSel, adminData[state][dist]);
       villageSel.innerHTML = '<option value="">-- Select --</option>';
     });
 
@@ -133,7 +137,8 @@
       const state = stateSel.value;
       const dist = districtSel.value;
       const tehsil = tehsilSel.value;
-      if (adminData[state][dist][tehsil]) populateDropdown(villageSel, adminData[state][dist][tehsil]);
+      if (adminData[state][dist][tehsil])
+        populateDropdown(villageSel, adminData[state][dist][tehsil]);
     });
 
     villageSel.addEventListener('change', () => {
@@ -144,18 +149,23 @@
       const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
       updateDMSFields(lat, lon);
-      setMarker(lat, lon, village);
+      if (marker) marker.remove();
+      marker = L.marker([lat, lon]).addTo(map).bindPopup(village).openPopup();
     });
 
-    map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
-      updateDMSFields(lat, lng);
-      setMarker(lat, lng, `Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`);
+    // 🔴 Submit Button Click Handler
+    document.getElementById("submitBtn").addEventListener("click", () => {
+      const lat = marker?.getLatLng()?.lat || "";
+      const lon = marker?.getLatLng()?.lng || "";
+      if (lat && lon) {
+        alert(`Submitted Coordinates:\nLatitude: ${lat.toFixed(6)}\nLongitude: ${lon.toFixed(6)}`);
+        // You can also POST this data using fetch() to your server endpoint
+      } else {
+        alert("Please click on the map to select a location first.");
+      }
     });
 
     loadData();
   </script>
 </body>
 </html>
-
-
