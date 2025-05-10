@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>India Admin Dropdown + Satellite Map</title>
+  <title>India Admin Dropdowns + Satellite Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -38,22 +38,12 @@
   <div id="map"></div>
 
   <script>
-    const stateMap = {
-      "AP": "Andhra Pradesh", "AR": "Arunachal Pradesh", "AS": "Assam",
-      "BR": "Bihar", "CH": "Chandigarh", "CT": "Chhattisgarh", "DL": "Delhi",
-      "GA": "Goa", "GJ": "Gujarat", "HR": "Haryana", "HP": "Himachal Pradesh",
-      "JH": "Jharkhand", "JK": "Jammu & Kashmir", "KA": "Karnataka",
-      "KL": "Kerala", "LA": "Ladakh", "LD": "Lakshadweep", "MH": "Maharashtra",
-      "ML": "Meghalaya", "MN": "Manipur", "MP": "Madhya Pradesh", "MZ": "Mizoram",
-      "NL": "Nagaland", "OD": "Odisha", "PB": "Punjab", "PY": "Puducherry",
-      "RJ": "Rajasthan", "SK": "Sikkim", "TN": "Tamil Nadu", "TR": "Tripura",
-      "UP": "Uttar Pradesh", "UT": "Uttarakhand", "WB": "West Bengal"
-    };
-
     const map = L.map('map').setView([22.9734, 78.6569], 5);
+
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Imagery © Esri'
     }).addTo(map);
+
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Labels © Esri'
     }).addTo(map);
@@ -64,6 +54,15 @@
     const districtSel = document.getElementById('district');
     const tehsilSel = document.getElementById('tehsil');
     const villageSel = document.getElementById('village');
+
+    const stateMap = {
+      'AP': 'Andhra Pradesh', 'AR': 'Arunachal Pradesh', 'AS': 'Assam', 'BR': 'Bihar', 'CG': 'Chhattisgarh',
+      'DL': 'Delhi', 'GA': 'Goa', 'GJ': 'Gujarat', 'HR': 'Haryana', 'HP': 'Himachal Pradesh',
+      'JK': 'Jammu & Kashmir', 'JH': 'Jharkhand', 'KA': 'Karnataka', 'KL': 'Kerala', 'MP': 'Madhya Pradesh',
+      'MH': 'Maharashtra', 'MN': 'Manipur', 'ML': 'Meghalaya', 'MZ': 'Mizoram', 'NL': 'Nagaland',
+      'OD': 'Odisha', 'PB': 'Punjab', 'RJ': 'Rajasthan', 'SK': 'Sikkim', 'TN': 'Tamil Nadu',
+      'TS': 'Telangana', 'TR': 'Tripura', 'UP': 'Uttar Pradesh', 'UK': 'Uttarakhand', 'WB': 'West Bengal'
+    };
 
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
@@ -84,17 +83,41 @@
       document.getElementById('lon_sec').value = lonS;
     }
 
-    function populateDropdown(select, items, renameKeys = false) {
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      updateDMSFields(lat, lng);
+      if (marker) marker.remove();
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+
+      marker.on('dragend', function (event) {
+        const pos = event.target.getLatLng();
+        updateDMSFields(pos.lat, pos.lng);
+        marker.setPopupContent(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
+      });
+    });
+
+    const adminData = {};
+
+    function populateDropdown(select, items) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key;
-        opt.text = renameKeys ? stateMap[key] || key : key;
+        opt.text = key;
         select.appendChild(opt);
       });
     }
 
-    const adminData = {};
+    function populateStateDropdown(data) {
+      stateSel.innerHTML = '<option value="">-- Select State --</option>';
+      Object.keys(data).forEach(code => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.text = stateMap[code] || code;
+        stateSel.appendChild(opt);
+      });
+    }
 
     function loadData() {
       fetch('india_admin_hierarchy.json.gz')
@@ -103,58 +126,47 @@
           const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
           const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
-          populateDropdown(stateSel, adminData, true);  // use stateMap here
+          populateStateDropdown(adminData);
         });
     }
 
     stateSel.addEventListener('change', () => {
-      const code = stateSel.value;
-      if (adminData[code]) populateDropdown(districtSel, adminData[code]);
+      const state = stateSel.value;
+      if (adminData[state]) populateDropdown(districtSel, adminData[state]);
       tehsilSel.innerHTML = '<option value="">-- Select --</option>';
       villageSel.innerHTML = '<option value="">-- Select --</option>';
     });
 
     districtSel.addEventListener('change', () => {
-      const code = stateSel.value;
+      const state = stateSel.value;
       const dist = districtSel.value;
-      if (adminData[code] && adminData[code][dist])
-        populateDropdown(tehsilSel, adminData[code][dist]);
+      if (adminData[state][dist]) populateDropdown(tehsilSel, adminData[state][dist]);
       villageSel.innerHTML = '<option value="">-- Select --</option>';
     });
 
     tehsilSel.addEventListener('change', () => {
-      const code = stateSel.value;
+      const state = stateSel.value;
       const dist = districtSel.value;
       const tehsil = tehsilSel.value;
-      if (adminData[code][dist][tehsil])
-        populateDropdown(villageSel, adminData[code][dist][tehsil]);
+      if (adminData[state][dist][tehsil]) populateDropdown(villageSel, adminData[state][dist][tehsil]);
     });
 
     villageSel.addEventListener('change', () => {
-      const code = stateSel.value;
+      const state = stateSel.value;
       const dist = districtSel.value;
       const tehsil = tehsilSel.value;
       const village = villageSel.value;
-      const [lat, lon] = adminData[code][dist][tehsil][village];
+      const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
       updateDMSFields(lat, lon);
       if (marker) marker.remove();
-      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(village).openPopup();
-      marker.on("dragend", e => {
-        const latlng = marker.getLatLng();
-        updateDMSFields(latlng.lat, latlng.lng);
-      });
-    });
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+        .bindPopup(village).openPopup();
 
-    map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
-      updateDMSFields(lat, lng);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
-      marker.on("dragend", e => {
-        const latlng = marker.getLatLng();
-        updateDMSFields(latlng.lat, latlng.lng);
+      marker.on('dragend', function (event) {
+        const pos = event.target.getLatLng();
+        updateDMSFields(pos.lat, pos.lng);
+        marker.setPopupContent(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
       });
     });
 
@@ -162,5 +174,3 @@
   </script>
 </body>
 </html>
-
-  
