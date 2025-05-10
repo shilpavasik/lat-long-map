@@ -49,10 +49,27 @@
     }).addTo(map);
 
     let marker;
+
     const stateSel = document.getElementById('state');
     const districtSel = document.getElementById('district');
     const tehsilSel = document.getElementById('tehsil');
     const villageSel = document.getElementById('village');
+
+    const stateNames = {
+      "DL": "Delhi",
+      "MH": "Maharashtra",
+      "GJ": "Gujarat",
+      "RJ": "Rajasthan",
+      "UP": "Uttar Pradesh",
+      "UK": "Uttarakhand",
+      "MP": "Madhya Pradesh",
+      "WB": "West Bengal",
+      "KA": "Karnataka",
+      "TN": "Tamil Nadu"
+      // 🔁 Add more state codes as needed
+    };
+
+    const adminData = {};
 
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
@@ -73,22 +90,12 @@
       document.getElementById('lon_sec').value = lonS;
     }
 
-    map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
-      updateDMSFields(lat, lng);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lng]).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
-    });
-
-    const adminData = {};
-
-    function populateDropdown(select, items) {
+    function populateDropdown(select, items, isState = false) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key;
-        opt.text = key;
+        opt.text = isState ? (stateNames[key] || key) : key;
         select.appendChild(opt);
       });
     }
@@ -100,7 +107,7 @@
           const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
           const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
-          populateDropdown(stateSel, adminData);
+          populateDropdown(stateSel, adminData, true);
         });
     }
 
@@ -136,10 +143,34 @@
       map.setView([lat, lon], 14);
       updateDMSFields(lat, lon);
       if (marker) marker.remove();
-      marker = L.marker([lat, lon]).addTo(map).bindPopup(village).openPopup();
+
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`).openPopup();
+
+      marker.on('dragend', function (e) {
+        const newPos = e.target.getLatLng();
+        updateDMSFields(newPos.lat, newPos.lng);
+        marker.setPopupContent(`Lat: ${newPos.lat.toFixed(6)}<br>Lon: ${newPos.lng.toFixed(6)}`).openPopup();
+      });
+    });
+
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      updateDMSFields(lat, lng);
+      if (marker) marker.remove();
+
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+
+      marker.on('dragend', function (e) {
+        const newPos = e.target.getLatLng();
+        updateDMSFields(newPos.lat, newPos.lng);
+        marker.setPopupContent(`Lat: ${newPos.lat.toFixed(6)}<br>Lon: ${newPos.lng.toFixed(6)}`).openPopup();
+      });
     });
 
     loadData();
   </script>
 </body>
 </html>
+
