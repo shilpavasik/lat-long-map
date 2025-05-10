@@ -5,6 +5,8 @@
   <title>India Admin Dropdowns + Satellite Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <style>
     body { font-family: Arial; padding: 20px; }
     label { font-weight: bold; display: block; margin-top: 10px; }
@@ -35,7 +37,6 @@
 
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([22.9734, 78.6569], 5);
 
@@ -48,6 +49,10 @@
     }).addTo(map);
 
     let marker;
+    const stateSel = document.getElementById('state');
+    const districtSel = document.getElementById('district');
+    const tehsilSel = document.getElementById('tehsil');
+    const villageSel = document.getElementById('village');
 
     function decimalToDMS(deg) {
       const d = Math.floor(deg);
@@ -78,11 +83,6 @@
 
     const adminData = {};
 
-    const stateSel = document.getElementById('state');
-    const districtSel = document.getElementById('district');
-    const tehsilSel = document.getElementById('tehsil');
-    const villageSel = document.getElementById('village');
-
     function populateDropdown(select, items) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
@@ -94,13 +94,14 @@
     }
 
     function loadData() {
-      fetch('india_admin_hierarchy.json') // local file in same folder
-        .then(res => res.json())
-        .then(data => {
+      fetch('india_admin_hierarchy.json.gz')
+        .then(res => res.arrayBuffer())
+        .then(buffer => {
+          const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
+          const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
           populateDropdown(stateSel, adminData);
-        })
-        .catch(err => console.error("Error loading JSON:", err));
+        });
     }
 
     stateSel.addEventListener('change', () => {
@@ -113,7 +114,8 @@
     districtSel.addEventListener('change', () => {
       const state = stateSel.value;
       const dist = districtSel.value;
-      if (adminData[state][dist]) populateDropdown(tehsilSel, adminData[state][dist]);
+      if (adminData[state] && adminData[state][dist])
+        populateDropdown(tehsilSel, adminData[state][dist]);
       villageSel.innerHTML = '<option value="">-- Select --</option>';
     });
 
@@ -121,7 +123,8 @@
       const state = stateSel.value;
       const dist = districtSel.value;
       const tehsil = tehsilSel.value;
-      if (adminData[state][dist][tehsil]) populateDropdown(villageSel, adminData[state][dist][tehsil]);
+      if (adminData[state][dist][tehsil])
+        populateDropdown(villageSel, adminData[state][dist][tehsil]);
     });
 
     villageSel.addEventListener('change', () => {
