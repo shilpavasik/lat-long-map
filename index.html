@@ -48,8 +48,17 @@
       attribution: 'Labels © Esri'
     }).addTo(map);
 
-    let marker;
+    const stateNames = {
+      "AP": "Andhra Pradesh", "AR": "Arunachal Pradesh", "AS": "Assam", "BR": "Bihar", "CG": "Chhattisgarh",
+      "CH": "Chandigarh", "DL": "Delhi", "GA": "Goa", "GJ": "Gujarat", "HR": "Haryana", "HP": "Himachal Pradesh",
+      "JH": "Jharkhand", "JK": "Jammu and Kashmir", "KA": "Karnataka", "KL": "Kerala", "LA": "Ladakh",
+      "LD": "Lakshadweep", "MH": "Maharashtra", "ML": "Meghalaya", "MN": "Manipur", "MP": "Madhya Pradesh",
+      "MZ": "Mizoram", "NL": "Nagaland", "OD": "Odisha", "PB": "Punjab", "PY": "Puducherry", "RJ": "Rajasthan",
+      "SK": "Sikkim", "TN": "Tamil Nadu", "TS": "Telangana", "TR": "Tripura", "UP": "Uttar Pradesh",
+      "UK": "Uttarakhand", "WB": "West Bengal", "AN": "Andaman and Nicobar Islands", "DI": "Dadra & Nagar Haveli and Daman & Diu"
+    };
 
+    let marker;
     const stateSel = document.getElementById('state');
     const districtSel = document.getElementById('district');
     const tehsilSel = document.getElementById('tehsil');
@@ -74,27 +83,23 @@
       document.getElementById('lon_sec').value = lonS;
     }
 
-    function addDraggableMarker(lat, lon, popupText) {
+    function setMarker(lat, lon, popup = '') {
       if (marker) map.removeLayer(marker);
-      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(popupText).openPopup();
-      updateDMSFields(lat, lon);
-
+      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(popup).openPopup();
       marker.on('dragend', function (e) {
-        const pos = e.target.getLatLng();
-        updateDMSFields(pos.lat, pos.lng);
-        marker.bindPopup(`Lat: ${pos.lat.toFixed(6)}<br>Lon: ${pos.lng.toFixed(6)}`).openPopup();
+        const { lat, lng } = e.target.getLatLng();
+        updateDMSFields(lat, lng);
       });
     }
 
     const adminData = {};
-    let stateNameMap = {}; // code to full name
 
-    function populateDropdown(select, items, isState = false) {
+    function populateDropdown(select, items, labelMap = {}) {
       select.innerHTML = '<option value="">-- Select --</option>';
       Object.keys(items).forEach(key => {
         const opt = document.createElement('option');
         opt.value = key;
-        opt.text = isState && stateNameMap[key] ? stateNameMap[key] : key;
+        opt.text = labelMap[key] || key;
         select.appendChild(opt);
       });
     }
@@ -106,18 +111,7 @@
           const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
           const data = JSON.parse(decompressed);
           Object.assign(adminData, data);
-          // Sample full names — update more as needed
-          stateNameMap = {
-            "AP": "Andhra Pradesh", "AR": "Arunachal Pradesh", "AS": "Assam", "BR": "Bihar",
-            "CG": "Chhattisgarh", "DL": "Delhi", "GJ": "Gujarat", "HR": "Haryana",
-            "HP": "Himachal Pradesh", "JK": "Jammu & Kashmir", "JH": "Jharkhand",
-            "KA": "Karnataka", "KL": "Kerala", "MP": "Madhya Pradesh", "MH": "Maharashtra",
-            "MN": "Manipur", "ML": "Meghalaya", "MZ": "Mizoram", "NL": "Nagaland",
-            "OD": "Odisha", "PB": "Punjab", "RJ": "Rajasthan", "SK": "Sikkim",
-            "TN": "Tamil Nadu", "TS": "Telangana", "TR": "Tripura", "UK": "Uttarakhand",
-            "UP": "Uttar Pradesh", "WB": "West Bengal", "LD": "Lakshadweep", "PY": "Puducherry"
-          };
-          populateDropdown(stateSel, adminData, true);
+          populateDropdown(stateSel, adminData, stateNames);
         });
     }
 
@@ -149,16 +143,19 @@
       const village = villageSel.value;
       const [lat, lon] = adminData[state][dist][tehsil][village];
       map.setView([lat, lon], 14);
-      addDraggableMarker(lat, lon, village);
+      updateDMSFields(lat, lon);
+      setMarker(lat, lon, village);
     });
 
     map.on('click', function (e) {
       const { lat, lng } = e.latlng;
-      addDraggableMarker(lat, lng, `Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`);
+      updateDMSFields(lat, lng);
+      setMarker(lat, lng, `Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`);
     });
 
     loadData();
   </script>
 </body>
 </html>
+
 
