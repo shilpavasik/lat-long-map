@@ -1,176 +1,376 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>India Admin Dropdowns + Satellite Map</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    label { font-weight: bold; display: block; margin-top: 10px; }
-    select, input { width: 240px; padding: 5px; margin: 5px 0; }
-    #map { height: 500px; margin-top: 20px; border: 1px solid #ccc; }
-    #submitBtn { margin-top: 10px; padding: 8px 20px; font-weight: bold; background-color: #c41414; color: white; border: none; cursor: pointer; }
-  </style>
+  <title>WIMS Map - Updated Label UI</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+ <style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
+
+  header {
+    background-color: white;
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  header nav a {
+    color: white;
+    margin-left: 20px;
+    text-decoration: none;
+  }
+
+  #main {
+    display: flex;
+    height: calc(100vh - 60px); /* header is ~60px tall */
+  }
+
+  #panel {
+    width: 300px;
+    background: #ffffffcc;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    overflow-y: auto;
+  }
+
+  #map {
+    flex-grow: 1;
+    cursor: crosshair;
+  }
+
+  button, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  button {
+    background: #f0f0f0;
+    border: 2px solid #004080;
+    color: #004080;
+    font-weight: bold;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  }
+
+  button:hover {
+    background: #e0e0e0;
+  }
+
+  .label-toggle {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+  }
+
+  .label-toggle input {
+    margin-right: 5px;
+  }
+
+  .label {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    padding: 2px 5px !important;
+    font-weight: normal !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    white-space: nowrap !important;
+  }
+</style>
 </head>
 <body>
-  <h2>📍 All India Administrative Map + Satellite View</h2>
+  <header style="background-color: white; color: black; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+  <!-- Left: Emblem Image -->
+  <img src="emblem.png" alt="Emblem" style="height: 70px;">
 
-  <label>State:</label>
-  <select id="state"></select>
+  <!-- Center: Title Text -->
+  <div style="font-size: 20px; font-weight: bold; color: black;">POC of GIS Integration</div>
 
-  <label>District:</label>
-  <select id="district"></select>
+  <!-- Right: Anchor with Logo Image -->
+  <a href="http://www.cwc.gov.in/" target="_blank">
+    <img src="cwc-logo.png" alt="Logo" style="height: 70px;">
+  </a>
+</header>
+  <div id="main">
+    <div id="panel">
+  <!-- <h3>Location Info (Left Panel)</h3>
+  <button id="stateBtn">Place:</button>
+  <button id="districtBtn">-</button>
+  <button id="subdistrictBtn"></button>
+  <button id="villageBtn"></button>
+  <button id="latlngBtn">Lat: - , Lng: -</button>
+  <button id="submitLeftBtn">✔ Submit</button>
+  <button id="locateMeBtn">📍 Locate Me</button>
+  <button id="resetLeftBtn">🔄 Reset</button> -->
+  <div class="label-toggle">
+    <input type="checkbox" id="labelToggle" checked>
+    <label for="labelToggle">Show Labels</label>
+  </div>
+  <h3>Search Panel</h3>
+  <select id="stateSelect"><option>Select State</option></select>
+  <select id="districtSelect"><option>Select District</option></select>
+  <select id="subdistrictSelect"><option>Select Subdistrict</option></select>
+  <select id="villageSelect"><option>Select Village</option></select>
+  
+  <button id="rightLatLngBtn">Lat: - , Lng: -</button>
+  <div style="display: flex; gap: 10px; align-items: center;">
+  <button id="resetRightBtn">🔄 Reset</button>
+  <button id="submitRightBtn">✔ Submit</button>
+</div>
 
-  <label>Tehsil:</label>
-  <select id="tehsil"></select>
+  </div>
+  
 
-  <label>Village:</label>
-  <select id="village"></select>
 
-  <label>Latitude (° ' "):</label>
-  <input id="lat_deg"> <input id="lat_min"> <input id="lat_sec">
+<div id="map"></div>
+</div>
 
-  <label>Longitude (° ' "):</label>
-  <input id="lon_deg"> <input id="lon_min"> <input id="lon_sec">
+<!-- <div id="rightPanel">
+  <div class="label-toggle">
+    <input type="checkbox" id="labelToggle" checked>
+    <label for="labelToggle">Show Labels</label>
+  </div>
+  <h3>Jump to Location (Right Panel)</h3>
+  <select id="stateSelect"><option>Select State</option></select>
+  <select id="districtSelect"><option>Select District</option></select>
+  <select id="subdistrictSelect"><option>Select Subdistrict</option></select>
+  <select id="villageSelect"><option>Select Village</option></select>
+  <button id="submitRightBtn">✔ Submit</button>
+  <button id="rightLatLngBtn">Lat: - , Lng: -</button>
+  <button id="resetRightBtn">🔄 Reset</button>
+</div> -->
 
-  <br>
-  <button id="submitBtn">Submit</button>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet"></script>
+<script>
+const map = L.map('map').setView([23.5, 80], 5);
+L.esri.basemapLayer('Imagery').addTo(map);
+L.esri.basemapLayer('ImageryLabels').addTo(map);
 
-  <div id="map"></div>
+const layersConfig = {
+  state: { url: 'https://arc.indiawris.gov.in/server/rest/services/Common/Administrative_WRP/FeatureServer/3', color: 'red', field: 'state' },
+  district: { url: 'https://arc.indiawris.gov.in/server/rest/services/Common/Administrative_WRP/FeatureServer/4', color: 'blue', field: 'district' },
+  subdistrict: { url: 'https://arc.indiawris.gov.in/server/rest/services/Common/Administrative_WRP/FeatureServer/5', color: 'purple', field: 'subdistrict' },
+  village: { url: 'https://arc.indiawris.gov.in/server/rest/services/Common/Administrative_WRP/FeatureServer/6', color: 'orange', field: 'village' }
+};
 
-  <script>
-    const map = L.map('map').setView([22.9734, 78.6569], 5);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Imagery © Esri'
-    }).addTo(map);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Labels © Esri'
-    }).addTo(map);
+let visuals = { district: null, subdistrict: null, village: null };
+let labels = [];
+let leftMarker = null;
+let rightMarker = null;
+let activePanel = null;
 
-    let marker;
-    let adminData = {};
-    const stateSel = document.getElementById('state');
-    const districtSel = document.getElementById('district');
-    const tehsilSel = document.getElementById('tehsil');
-    const villageSel = document.getElementById('village');
-
-    function decimalToDMS(deg) {
-      const d = Math.floor(deg);
-      const minFloat = (deg - d) * 60;
-      const m = Math.floor(minFloat);
-      const s = ((minFloat - m) * 60).toFixed(3);
-      return [d, m, s];
+function clearLayers(keys) {
+  keys.forEach(key => {
+    if (visuals[key]) {
+      map.removeLayer(visuals[key]);
+      visuals[key] = null;
     }
+  });
+  labels.forEach(label => map.removeLayer(label));
+  labels = [];
+}
 
-    function updateDMSFields(lat, lon) {
-      const [latD, latM, latS] = decimalToDMS(lat);
-      const [lonD, lonM, lonS] = decimalToDMS(lon);
-      document.getElementById('lat_deg').value = latD;
-      document.getElementById('lat_min').value = latM;
-      document.getElementById('lat_sec').value = latS;
-      document.getElementById('lon_deg').value = lonD;
-      document.getElementById('lon_min').value = lonM;
-      document.getElementById('lon_sec').value = lonS;
+function setDropdownValue(id, value) {
+  const sel = document.getElementById(id);
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].text === value) {
+      sel.selectedIndex = i;
+      break;
     }
+  }
+}
 
-    map.on('click', function (e) {
-      const { lat, lng } = e.latlng;
-      updateDMSFields(lat, lng);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`).openPopup();
+function addLabelToMap(bounds, text) {
+  const center = bounds.getCenter();
+  const offsetLat = (bounds.getNorth() - bounds.getSouth()) * 0.08;
+  const label = L.marker([center.lat + offsetLat, center.lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div class='label'>${text}</div>`
+    }),
+    interactive: false
+  });
+  labels.push(label);
+  if (document.getElementById('labelToggle').checked) {
+    label.addTo(map);
+  }
+}
 
-      marker.on('dragend', function (e) {
-        const newLatLng = e.target.getLatLng();
-        updateDMSFields(newLatLng.lat, newLatLng.lng);
-      });
+function loadLayer(config, whereClause, selectId, visualKey) {
+  L.esri.query({ url: config.url }).where(whereClause).limit(1000).run(function(err, fc) {
+    if (err) return console.error(err);
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = `<option>Select ${visualKey}</option>`;
+    fc.features.forEach(f => {
+      const name = f.properties[config.field];
+      const center = L.geoJSON(f.geometry).getBounds().getCenter();
+      sel.add(new Option(name, JSON.stringify({ name: name, coords: [center.lat, center.lng] })));
     });
 
-    function populateDropdown(select, items) {
-      select.innerHTML = '<option value="">-- Select --</option>';
-      Object.keys(items).forEach(key => {
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.text = key;
-        select.appendChild(opt);
-      });
-    }
-
-    function loadData() {
-      fetch('india_admin_hierarchy.json.gz')
-        .then(res => res.arrayBuffer())
-        .then(buffer => {
-          const decompressed = new TextDecoder("utf-8").decode(pako.ungzip(new Uint8Array(buffer)));
-          const data = JSON.parse(decompressed);
-          Object.assign(adminData, data);
-          populateDropdown(stateSel, adminData);
+    visuals[visualKey] = L.geoJSON(fc, {
+      style: { color: config.color, weight: 2, fillOpacity: 0 },
+      onEachFeature: function (feature, layer) {
+        layer.on('click', function(e) {
+          if (activePanel === 'right') {
+            const p = feature.properties;
+            if (p.state) setDropdownValue('stateSelect', p.state);
+            if (p.district) setDropdownValue('districtSelect', p.district);
+            if (p.subdistrict) setDropdownValue('subdistrictSelect', p.subdistrict);
+            if (p.village) setDropdownValue('villageSelect', p.village);
+            const latlng = e.latlng;
+            if (rightMarker) rightMarker.setLatLng(latlng);
+            else rightMarker = L.marker(latlng).addTo(map);
+            document.getElementById('rightLatLngBtn').innerText = `Lat: ${latlng.lat.toFixed(5)} , Lng: ${latlng.lng.toFixed(5)}`;
+          }
         });
-    }
+        const labelText = feature.properties[config.field];
+        const bounds = layer.getBounds();
+        addLabelToMap(bounds, labelText);
+      }
+    }).addTo(map);
+  });
+}
 
-    stateSel.addEventListener('change', () => {
-      const state = stateSel.value;
-      if (adminData[state]) populateDropdown(districtSel, adminData[state]);
-      tehsilSel.innerHTML = villageSel.innerHTML = '<option value="">-- Select --</option>';
+L.esri.query({ url: layersConfig.state.url }).where('1=1').limit(1000).run(function(err, fc) {
+  if (err) return console.error(err);
+  const sel = document.getElementById('stateSelect');
+  fc.features.forEach(f => {
+    const name = f.properties.state;
+    const center = L.geoJSON(f.geometry).getBounds().getCenter();
+    sel.add(new Option(name, JSON.stringify({ name: name, coords: [center.lat, center.lng] })));
+  });
+});
+
+document.getElementById('stateSelect').addEventListener('change', function() {
+  activePanel = 'right';
+  const data = JSON.parse(this.value);
+  map.setView(data.coords, 7);
+  clearLayers(['district', 'subdistrict', 'village']);
+  loadLayer(layersConfig.district, `state='${data.name}'`, 'districtSelect', 'district');
+});
+
+document.getElementById('districtSelect').addEventListener('change', function() {
+  const data = JSON.parse(this.value);
+  map.setView(data.coords, 9);
+  clearLayers(['subdistrict', 'village']);
+  loadLayer(layersConfig.subdistrict, `district='${data.name}'`, 'subdistrictSelect', 'subdistrict');
+});
+
+document.getElementById('subdistrictSelect').addEventListener('change', function() {
+  const data = JSON.parse(this.value);
+  map.setView(data.coords, 12);
+  clearLayers(['village']);
+  loadLayer(layersConfig.village, `subdistrict='${data.name}'`, 'villageSelect', 'village');
+});
+
+document.getElementById('villageSelect').addEventListener('change', function() {
+  const data = JSON.parse(this.value);
+  map.setView(data.coords, 14);
+});
+
+document.getElementById('submitRightBtn').addEventListener('click', function () {
+  alert('Right Panel Submitted!');
+});
+
+document.getElementById('submitLeftBtn').addEventListener('click', function () {
+  alert('Left Panel Submitted!');
+});
+
+document.getElementById('locateMeBtn').addEventListener('click', function () {
+  activePanel = 'left';
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function (position) {
+      const latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+      map.setView(latlng, 14);
+      if (leftMarker) leftMarker.setLatLng(latlng);
+      else leftMarker = L.marker(latlng).addTo(map);
+      updateLeftPanel(latlng);
     });
+  }
+});
 
-    districtSel.addEventListener('change', () => {
-      const state = stateSel.value;
-      const dist = districtSel.value;
-      if (adminData[state] && adminData[state][dist])
-        populateDropdown(tehsilSel, adminData[state][dist]);
-      villageSel.innerHTML = '<option value="">-- Select --</option>';
-    });
+map.on('click', function (e) {
+  const latlng = e.latlng;
+  if (activePanel === 'left') {
+    if (leftMarker) leftMarker.setLatLng(latlng);
+    else leftMarker = L.marker(latlng).addTo(map);
+    updateLeftPanel(latlng);
+  }
+});
 
-    tehsilSel.addEventListener('change', () => {
-      const state = stateSel.value;
-      const dist = districtSel.value;
-      const tehsil = tehsilSel.value;
-      if (adminData[state][dist][tehsil])
-        populateDropdown(villageSel, adminData[state][dist][tehsil]);
-    });
+function updateLeftPanel(latlng) {
+  document.getElementById('latlngBtn').innerText = `Lat: ${latlng.lat.toFixed(5)} , Lng: ${latlng.lng.toFixed(5)}`;
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${latlng.lat}&lon=${latlng.lng}&format=json`;
+  fetch(url, {
+    headers: { 'User-Agent': 'WIMSMap/1.0 (your-email@example.com)' }
+  })
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById('stateBtn').innerText = 'Place:';
+    document.getElementById('districtBtn').innerText = data.display_name || 'No place found';
+    document.getElementById('subdistrictBtn').innerText = '';
+    document.getElementById('villageBtn').innerText = '';
+  })
+  .catch(error => {
+    console.error('Nominatim error:', error);
+    document.getElementById('districtBtn').innerText = 'Error fetching place';
+  });
+}
 
-    villageSel.addEventListener('change', () => {
-      const state = stateSel.value;
-      const dist = districtSel.value;
-      const tehsil = tehsilSel.value;
-      const village = villageSel.value;
-      const [lat, lon] = adminData[state][dist][tehsil][village];
-      map.setView([lat, lon], 14);
-      updateDMSFields(lat, lon);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup(village).openPopup();
+document.getElementById('labelToggle').addEventListener('change', function () {
+  if (this.checked) {
+    labels.forEach(label => label.addTo(map));
+  } else {
+    labels.forEach(label => map.removeLayer(label));
+  }
+});
 
-      marker.on('dragend', function (e) {
-        const newLatLng = e.target.getLatLng();
-        updateDMSFields(newLatLng.lat, newLatLng.lng);
-      });
-    });
+document.getElementById('resetLeftBtn').addEventListener('click', function () {
+  if (leftMarker) {
+    map.removeLayer(leftMarker);
+    leftMarker = null;
+  }
+  document.getElementById('stateBtn').innerText = 'Place:';
+  document.getElementById('districtBtn').innerText = '-';
+  document.getElementById('subdistrictBtn').innerText = '';
+  document.getElementById('villageBtn').innerText = '';
+  document.getElementById('latlngBtn').innerText = 'Lat: - , Lng: -';
+  map.setView([23.5, 80], 5);
+});
 
-    document.getElementById('submitBtn').addEventListener('click', () => {
-      const state = stateSel.value;
-      const district = districtSel.value;
-      const tehsil = tehsilSel.value;
-      const village = villageSel.value;
-
-      const lat = `${document.getElementById('lat_deg').value}°${document.getElementById('lat_min').value}'${document.getElementById('lat_sec').value}"`;
-      const lon = `${document.getElementById('lon_deg').value}°${document.getElementById('lon_min').value}'${document.getElementById('lon_sec').value}"`;
-
-      const csv = `State,District,Tehsil,Village,Latitude,Longitude\n"${state}","${district}","${tehsil}","${village}","${lat}","${lon}"`;
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${village}_location.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    });
-
-    loadData();
-  </script>
+document.getElementById('resetRightBtn').addEventListener('click', function () {
+  if (rightMarker) {
+    map.removeLayer(rightMarker);
+    rightMarker = null;
+  }
+  ['stateSelect', 'districtSelect', 'subdistrictSelect', 'villageSelect'].forEach(id => {
+    const el = document.getElementById(id);
+    el.selectedIndex = 0;
+    if (id !== 'stateSelect') el.innerHTML = `<option>Select ${id.replace('Select', '')}</option>`;
+  });
+  document.getElementById('rightLatLngBtn').innerText = 'Lat: - , Lng: -';
+  clearLayers(['district', 'subdistrict', 'village']);
+  map.setView([23.5, 80], 5);
+});
+</script>
 </body>
 </html>
