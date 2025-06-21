@@ -7,8 +7,54 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
   <style>
-    html, body { margin:0; height:100%; font-family: Arial, sans-serif; }
-    #app { display: flex; height: 100%; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    #banner {
+      background: linear-gradient(to right, #f8f9fa, #e8f0fa);
+      padding: 10px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 120px;
+      border-bottom: 2px solid #f26522;
+    }
+
+    .banner-left, .banner-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .banner-left img, .banner-right img {
+      height: 70px;
+      margin-right: 15px;
+    }
+
+    .banner-center {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .banner-center h1 {
+      font-size: 24px;
+      margin: 0;
+      font-weight: bold;
+    }
+
+    .banner-center h2 {
+      font-size: 14px;
+      font-weight: normal;
+      margin: 3px 0 0;
+    }
+
+    #app {
+      display: flex;
+      height: calc(100vh - 120px); /* Banner height subtracted */
+    }
+
     #leftPanel {
       width: 310px;
       background: #ffffffcc;
@@ -16,23 +62,39 @@
       overflow-y: auto;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    #map { flex: 1; }
+
+    #map {
+      flex: 1;
+      height: 100%;
+    }
+
     h3, h4 { margin: 0.5em 0 0.3em; }
+
     select, button, textarea {
       width: 100%; margin: 5px 0; padding: 7px;
       border-radius: 8px; font-size: 14px;
     }
+
     #coordsDisplay {
-      font-family: monospace; font-size: 12px;
-      background: #f8f8f8; border: 1px dashed #999;
-      padding: 5px; white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+      background: #f8f8f8;
+      border: 1px dashed #999;
+      padding: 5px;
+      white-space: pre-wrap;
     }
+
     .feature-info {
-      width: 100%; border-collapse: collapse; font-size: 13px;
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
     }
+
     .feature-info td {
-      border: 1px solid #ccc; padding: 4px;
+      border: 1px solid #ccc;
+      padding: 4px;
     }
+
     .boundary-label {
       background: rgba(255,255,255,0.8);
       color: #000;
@@ -42,15 +104,30 @@
       border-radius: 3px;
     }
 
-    /* ✅ Hide Leaflet & Esri attribution completely */
     .leaflet-control-attribution,
-    .esri-leaflet-logo,
-    .leaflet-container .leaflet-control-container .leaflet-control-attribution {
+    .esri-leaflet-logo {
       display: none !important;
     }
   </style>
 </head>
 <body>
+
+<!-- HEADER -->
+<div id="banner">
+  <div class="banner-left">
+    <img src="emblem.png" alt="Emblem">
+    <img src="azadi.png" alt="Azadi Ka Amrit Mahotsav">
+  </div>
+  <div class="banner-center">
+    <h1>Central Water Commission</h1>
+    <h2>Department of Water Resources, River Development & Ganga Rejuvenation<br>Ministry of Jal Shakti</h2>
+  </div>
+  <div class="banner-right">
+    <img src="cwc-logo.png" alt="CWC Logo">
+  </div>
+</div>
+
+<!-- MAIN APP -->
 <div id="app">
   <div id="leftPanel">
     <h3>Jump to Location</h3>
@@ -71,6 +148,7 @@
   <div id="map"></div>
 </div>
 
+<!-- JS LIBRARIES -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/esri-leaflet"></script>
@@ -115,8 +193,7 @@ function resetSelect(sel, label) {
   opt.selected = true;
   sel.add(opt);
 }
-
-Object.keys(dd).forEach(k => resetSelect(dd[k], k.charAt(0).toUpperCase() + k.slice(1)));
+Object.keys(dd).forEach(k => resetSelect(dd[k], k));
 
 let boundaryLayer = null;
 function showBoundary(geom, color) {
@@ -140,7 +217,7 @@ function showBoundary(geom, color) {
 
 L.esri.query({ url: cfg.state.url }).where('1=1').limit(1000).run((err, fc) => {
   if (err || !fc || !fc.features) {
-    alert("Could not load states. Check your internet connection.");
+    alert("Could not load states.");
     return;
   }
   fc.features.forEach(f => {
@@ -187,7 +264,7 @@ dd.village.onchange = () => {
 };
 
 document.getElementById('resetRightBtn').onclick = () => {
-  Object.keys(dd).forEach(k => resetSelect(dd[k], k.charAt(0).toUpperCase() + k.slice(1)));
+  Object.keys(dd).forEach(k => resetSelect(dd[k], k));
   if (boundaryLayer) map.removeLayer(boundaryLayer);
   map.setView([23.5, 80], 5);
   document.getElementById('rightLatLngBtn').textContent = 'Lat: - , Lng: -';
@@ -206,7 +283,6 @@ map.on(L.Draw.Event.CREATED, e => {
 });
 
 const propsMap = new Map();
-
 function buildPopup(props, editable) {
   const areaRow = props.geometryType === 'Polygon'
     ? `<tr><td>Area (sq.m)</td><td>${props.area.toFixed(2)}</td></tr>` : '';
@@ -285,5 +361,6 @@ drawn.on('click', function (e) {
   document.getElementById('featureInfoDisplay').innerHTML = buildPopup(props, false);
 });
 </script>
+
 </body>
 </html>
