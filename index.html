@@ -14,12 +14,12 @@
     }
 
     #banner {
-      background: linear-gradient(to right, #f8f9fa, #e8f0fa);
-      padding: 10px 30px;
+      background: #ffffff;
+      padding: 5px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 120px;
+      height: 90px;
       border-bottom: 2px solid #f26522;
     }
 
@@ -29,8 +29,8 @@
     }
 
     .banner-left img, .banner-right img {
-      height: 70px;
-      margin-right: 15px;
+      height: 60px;
+      margin-right: 10px;
     }
 
     .banner-center {
@@ -39,20 +39,20 @@
     }
 
     .banner-center h1 {
-      font-size: 24px;
+      font-size: 20px;
       margin: 0;
       font-weight: bold;
     }
 
     .banner-center h2 {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: normal;
-      margin: 3px 0 0;
+      margin: 2px 0 0;
     }
 
     #app {
       display: flex;
-      height: calc(100vh - 120px); /* Banner height subtracted */
+      height: calc(100vh - 90px);
     }
 
     #leftPanel {
@@ -131,10 +131,10 @@
 <div id="app">
   <div id="leftPanel">
     <h3>Jump to Location</h3>
-    <select id="stateSelect"><option disabled selected>-- Select State --</option></select>
-    <select id="districtSelect"><option disabled selected>-- Select District --</option></select>
-    <select id="subdistrictSelect"><option disabled selected>-- Select Tehsil --</option></select>
-    <select id="villageSelect"><option disabled selected>-- Select Village --</option></select>
+    <select id="stateSelect"><option disabled selected>-- Select state --</option></select>
+    <select id="districtSelect"><option disabled selected>-- Select district --</option></select>
+    <select id="subdistrictSelect"><option disabled selected>-- Select subdistrict --</option></select>
+    <select id="villageSelect"><option disabled selected>-- Select village --</option></select>
     <button id="submitRightBtn">✔ Submit</button>
     <button id="rightLatLngBtn">Lat: - , Lng: -</button>
     <button id="resetRightBtn">🔄 Reset</button>
@@ -275,7 +275,6 @@ document.getElementById('resetRightBtn').onclick = () => {
 let workingLayer = null;
 map.on(L.Draw.Event.CREATED, e => {
   workingLayer = e.layer;
-  drawn.addLayer(workingLayer);
   const latlngs = (workingLayer.getLatLngs?.()[0]) || [workingLayer.getLatLng()];
   const text = latlngs.map((p, i) => `${i + 1}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`).join('\n');
   document.getElementById('coordsDisplay').textContent = text;
@@ -313,11 +312,16 @@ function buildPopup(props, editable) {
 
 document.getElementById('submitFeature').onclick = () => {
   if (!workingLayer) return alert('Draw something first!');
+
+  drawn.clearLayers(); // remove old
+  drawn.addLayer(workingLayer);
+
   const geometryType = workingLayer instanceof L.Polygon ? 'Polygon' : 'Point';
   let area = 0;
   if (geometryType === 'Polygon') {
     area = L.GeometryUtil.geodesicArea(workingLayer.getLatLngs()[0]);
   }
+
   const p = {
     state: dd.state.value ? JSON.parse(dd.state.value).name : '',
     district: dd.district.value ? JSON.parse(dd.district.value).name : '',
@@ -328,9 +332,13 @@ document.getElementById('submitFeature').onclick = () => {
     geometryType,
     area
   };
+
   propsMap.set(workingLayer._leaflet_id, p);
   workingLayer.bindPopup(buildPopup(p, true)).openPopup();
   document.getElementById('featureInfoDisplay').innerHTML = buildPopup(p, false);
+  document.getElementById('info').value = '';
+  document.getElementById('coordsDisplay').textContent = '';
+  document.getElementById('rightLatLngBtn').textContent = 'Lat: - , Lng: -';
   workingLayer = null;
 };
 
@@ -361,6 +369,5 @@ drawn.on('click', function (e) {
   document.getElementById('featureInfoDisplay').innerHTML = buildPopup(props, false);
 });
 </script>
-
 </body>
 </html>
