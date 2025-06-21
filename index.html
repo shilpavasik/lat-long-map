@@ -41,6 +41,13 @@
       padding: 1px 4px;
       border-radius: 3px;
     }
+
+    /* ✅ Hide Leaflet & Esri attribution completely */
+    .leaflet-control-attribution,
+    .esri-leaflet-logo,
+    .leaflet-container .leaflet-control-container .leaflet-control-attribution {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -70,7 +77,7 @@
 <script src="https://unpkg.com/leaflet-geometryutil"></script>
 
 <script>
-const map = L.map('map').setView([23.5, 80], 5);
+const map = L.map('map', { attributionControl: false }).setView([23.5, 80], 5);
 L.esri.basemapLayer('Imagery').addTo(map);
 
 const drawn = new L.FeatureGroup().addTo(map);
@@ -203,7 +210,6 @@ const propsMap = new Map();
 function buildPopup(props, editable) {
   const areaRow = props.geometryType === 'Polygon'
     ? `<tr><td>Area (sq.m)</td><td>${props.area.toFixed(2)}</td></tr>` : '';
-
   if (editable) {
     return `
       <table class="feature-info">
@@ -217,7 +223,6 @@ function buildPopup(props, editable) {
         <tr><td colspan="2"><button onclick="saveEdits(this)">💾 Save</button><button onclick="approveFeature(this)">✔ Approve</button></td></tr>
       </table>`;
   }
-
   return `
     <table class="feature-info">
       <tr><td>State</td><td>${props.state}</td></tr>
@@ -237,7 +242,6 @@ document.getElementById('submitFeature').onclick = () => {
   if (geometryType === 'Polygon') {
     area = L.GeometryUtil.geodesicArea(workingLayer.getLatLngs()[0]);
   }
-
   const p = {
     state: dd.state.value ? JSON.parse(dd.state.value).name : '',
     district: dd.district.value ? JSON.parse(dd.district.value).name : '',
@@ -248,7 +252,6 @@ document.getElementById('submitFeature').onclick = () => {
     geometryType,
     area
   };
-
   propsMap.set(workingLayer._leaflet_id, p);
   workingLayer.bindPopup(buildPopup(p, true)).openPopup();
   document.getElementById('featureInfoDisplay').innerHTML = buildPopup(p, false);
